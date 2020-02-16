@@ -1,31 +1,28 @@
 package main;
 
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
-
-import java.io.File;
-import java.net.URL;
+import lk.vivoxalabs.customstage.CustomStage;
+import util.manager.DownloadManager;
 
 public class Main extends Application{
 
+    public static final DownloadManager DOWNLOAD_MANAGER = new DownloadManager();
 
   @Override
   public void start(Stage primaryStage) throws Exception{
+      CustomStage.getDefaultSceneManager().automate(getClass().getResource("/view/fxml/viewApp.fxml").toURI().toURL());
 
-    System.out.println(new File("src/main/resources/fxml/viewApp.fxml").getAbsolutePath());
-
-    URL url = getClass().getClassLoader().getResource( "src/main/resources/fxml/viewApp.fxml" );
-    Parent root = FXMLLoader.load(url);
-    primaryStage.setTitle("Night Wolf");
-    primaryStage.getIcons().add(new Image( "sample/logo_blue.png"));
-    primaryStage.setScene(new Scene(root, 700, 500));
-    // primaryStage.setResizable(false);
-    // primaryStage.setMaximized(true);
-    primaryStage.show();
+      Parent root = CustomStage.getDefaultSceneManager().getScene("viewApp");
+      primaryStage.setTitle("Night Wolf");
+      primaryStage.getIcons().add(new Image( "images/logo_blue.png"));
+      primaryStage.setScene(new Scene(root, 800, 600));
+      // primaryStage.setResizable(false);
+      // primaryStage.setMaximized(true);
+      primaryStage.show();
   }
 
   public static void main(String[] args) {

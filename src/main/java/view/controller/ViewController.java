@@ -1,43 +1,64 @@
 package view.controller;
 
-import com.jfoenix.controls.JFXTextField;
-import com.jfoenix.controls.JFXTimePicker;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
+import main.Main;
 import tablemodel.DownloadTableModel;
 import util.Download;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.time.LocalTime;
-import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.ResourceBundle;
 
 public class ViewController implements Initializable {
 
-  @FXML
-  private JFXTextField addURL;
+    @FXML
+    private Button btnStart;
 
-  @FXML
-  private JFXTimePicker addTime;
+    @FXML
+    private Button btnStartAll;
+
+    @FXML
+    private Button btnPause;
+
+    @FXML
+    private Button btnStop;
+
+    @FXML
+    private Button btnStopAll;
+
+    @FXML
+    private TextField txtUrl;
+
+    @FXML
+    private TextField txtHr;
+
+    @FXML
+    private TextField txtMn;
+
+    @FXML
+    private Button btnAdd;
 
   @FXML
   private TableView<DownloadTableModel> tbl;
 
   @FXML
-  private TableColumn<DownloadTableModel, String> colFileName, colLoc, colProg, colSchTime, colUrl, colFileSize;
+  private TableColumn<DownloadTableModel, String> colFileName, colLoc, colSchTime, colUrl, colFileSize, colProg;
+
+//  @FXML private TableColumn<DownloadTableModel, StringProperty> colProg;
 
   private File downloadFile;
 
@@ -49,61 +70,97 @@ public class ViewController implements Initializable {
   private AnchorPane rootPane;
 
 
-
-  @FXML
-  private void addButtonAction(ActionEvent event) {
-
-    if (!(addURL.getText().isEmpty())) {
-      final DirectoryChooser directoryChooser = new DirectoryChooser();
-      Stage stage = (Stage) rootPane.getScene().getWindow();
-      File selectedFile = directoryChooser.showDialog( stage );
-      String z = addTime.getValue().toString();
-      downloads.add( new Download( addURL.getText(), addURL.getText(), addURL.getText(), z, selectedFile.getAbsolutePath() ) );
-      addURL.clear();
-    }
-  }
-
   public ViewController() {
 
   }
 
+  @FXML
+  private void stop(ActionEvent event) {
+      DownloadTableModel model = tbl.getSelectionModel().getSelectedItem();
+      Download download = new Download(model.getUrl(), new Date(model.getSchTime()), model.getLocation());
+      Main.DOWNLOAD_MANAGER.stopDownload(download);
+  }
+
+  @FXML
+  private void resume(ActionEvent event) {
+      DownloadTableModel model = tbl.getSelectionModel().getSelectedItem();
+      Download download = new Download(model.getUrl(), new Date(model.getSchTime()), model.getLocation());
+      Main.DOWNLOAD_MANAGER.resumeDownload(download);
+  }
+
+  @FXML
+  private void addDownload(ActionEvent event) {
+//      System.out.println(txtHr.getText() + ":" + txtMn.getText());
+      try {
+          String location;
+          if(!txtUrl.getText().isEmpty() && !txtMn.getText().isEmpty() && !txtHr.getText().isEmpty()) {
+              final DirectoryChooser directoryChooser = new DirectoryChooser();
+              Stage stage = (Stage) rootPane.getScene().getWindow();
+              File selectedFile = directoryChooser.showDialog( stage );
+              location = selectedFile.getAbsolutePath();
+          } else {
+              System.out.println("Fields Empty!");
+              return;
+          }
+
+          int hour = Integer.parseInt(txtHr.getText());
+          int min = Integer.parseInt(txtMn.getText());
+
+          Calendar calendar = Calendar.getInstance();
+          calendar.set(Calendar.HOUR_OF_DAY, hour);
+          calendar.set(Calendar.MINUTE, min);
+          calendar.set(Calendar.SECOND, 0);
+
+          System.out.println(calendar.getTime());
+          System.out.println(location);
+
+//      System.out.println(calendar.getTime());
+
+          Download download = new Download(txtUrl.getText(), calendar.getTime(), location);
+
+          System.out.println(download);
+
+          download = Main.DOWNLOAD_MANAGER.addNewDownload(download);
+          System.out.println();
+          System.out.println(download);
+
+          DownloadTableModel row = new DownloadTableModel(download);
+
+          tbl.getItems().add(row);
+
+
+      } catch (Exception e) {
+          e.printStackTrace();
+//          System.out.println("Number format error");
+      }
+  }
+
   public void initialize(URL location, ResourceBundle resources) {
-    try {
-      downloadFile = new File(getClass().getResource("downloads.csv").toURI());
-    } catch (URISyntaxException e) {
-      System.out.println("Download CSV load failed!");
-      e.printStackTrace();
-    }
+//    System.out.println(addTime.getValue().toString());
 
-    tblRows = tbl.getItems();
-    downloads = new ArrayList<>(  );
-    List<DownloadTableModel> csvData = null;
-    try {
-      csvData = readCSV( downloadFile );
-      tblRows.addAll( csvData );
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
+//      System.out.println("here");
+
+      colFileName.setCellValueFactory(new PropertyValueFactory<>("fileName"));
+      colFileSize.setCellValueFactory(new PropertyValueFactory<>("fileSize"));
+      colLoc.setCellValueFactory(new PropertyValueFactory<>("location"));
+      colSchTime.setCellValueFactory(new PropertyValueFactory<>("schTime"));
+      colProg.setCellValueFactory(new PropertyValueFactory<>("progress"));
+      colUrl.setCellValueFactory(new PropertyValueFactory<>("url"));
+
+      tblRows = tbl.getItems();
+
+//      System.out.println("init");
+      for(Download download : Main.DOWNLOAD_MANAGER.getDownloads()) {
+          DownloadTableModel model = new DownloadTableModel(download);
+          tblRows.add(model);
+      }
+
+      btnAdd.setOnAction(this::addDownload);
+
+      btnStop.setOnAction(this::stop);
+      btnStart.setOnAction(this::resume);
+
   }
 
-  private List<DownloadTableModel> readCSV(File csvFile) throws Exception{
-    List<DownloadTableModel> rows = new ArrayList<>(  );
-    BufferedReader csvReader = new BufferedReader(new FileReader( csvFile ));
-    String row;
-    while ((row = csvReader.readLine()) != null) {
-      String[] data = row.split(",");
-      // do something with the data
 
-      DownloadTableModel model = new DownloadTableModel(data[0], data[1], data[2], data[3], data[4]);
-
-      Download download = new Download( data[0], data[1], data[2], data[3], data[4] );
-
-      downloads.add( download );
-
-      rows.add( model );
-    }
-    csvReader.close();
-
-    return rows;
-  }
 }
